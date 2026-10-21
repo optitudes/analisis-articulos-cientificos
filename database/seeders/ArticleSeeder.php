@@ -4,27 +4,30 @@ namespace Database\Seeders;
 
 use App\Models\Article\Article;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class ArticleSeeder extends Seeder
 {
     public function run(): void
     {
-        $files = collect(File::files(public_path('articles')))
-            ->filter(fn ($file) => strtolower($file->getExtension()) === 'pdf')
-            ->sortBy(fn ($file) => $file->getFilename(), SORT_NATURAL | SORT_FLAG_CASE);
+        // Abstracts are stored as seed data so database seeding never depends on
+        // GROBID, network access, or running an extraction process.
+        $abstractsByFilename = require __DIR__.'/data/article_abstracts.php';
 
-        foreach ($files as $file) {
-            $filename = $file->getFilename();
+        foreach ($abstractsByFilename as $filename => $abstract) {
             $name = pathinfo($filename, PATHINFO_FILENAME);
             $name = preg_replace('/^\d+\.\s*/u', '', $name) ?? $name;
             $name = Str::of($name)->replaceMatches('/\s+/u', ' ')->trim()->toString();
             $relativePath = 'articles/'.$filename;
 
-            Article::query()->firstOrCreate(
+            // updateOrCreate also fills abstracts for article rows that were
+            // already seeded with null before the extracted text was added.
+            Article::query()->updateOrCreate(
                 ['relative_path' => $relativePath],
-                ['name' => $name, 'abstract' => null],
+                [
+                    'name' => $name,
+                    'abstract' => $abstract,
+                ],
             );
         }
     }
