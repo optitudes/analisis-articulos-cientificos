@@ -11,19 +11,28 @@ class ArticleSeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_seeds_all_pdf_abstracts_and_refreshes_existing_rows(): void
+    public function test_it_seeds_abstracts_verbatim_and_refreshes_existing_rows(): void
     {
+        $abstractsByFilename = require base_path('database/seeders/data/article_abstracts.php');
         $seeder = app(ArticleSeeder::class);
         $seeder->run();
 
-        $this->assertSame(20, Article::query()->count());
+        $this->assertSame(count($abstractsByFilename), Article::query()->count());
         $this->assertSame(
-            20,
+            count($abstractsByFilename),
             Article::query()
                 ->whereNotNull('abstract')
                 ->where('abstract', '<>', '')
                 ->count(),
         );
+
+        foreach ($abstractsByFilename as $filename => $abstract) {
+            $this->assertSame(
+                $abstract,
+                Article::query()->where('relative_path', 'articles/'.$filename)->value('abstract'),
+                'The seeded abstract must exactly match its static source: '.$filename,
+            );
+        }
 
         $article = Article::query()
             ->where('relative_path', 'like', 'articles/14.%')
