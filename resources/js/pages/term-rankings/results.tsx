@@ -13,12 +13,22 @@ type RankingArticle = {
     name: string;
 };
 
+type RankingAlgorithm = 'counting-sort' | 'radix-sort' | 'bucket-sort';
+
+const algorithmLabels: Record<RankingAlgorithm, string> = {
+    'counting-sort': 'Counting Sort',
+    'radix-sort': 'Radix Sort',
+    'bucket-sort': 'Bucket Sort',
+};
+
 export default function TermRankingsResults({
     ranking,
+    algorithm,
     executionTimeNanoseconds,
     articles,
 }: {
     ranking: RankedTerm[];
+    algorithm: RankingAlgorithm;
     executionTimeNanoseconds: number;
     articles: RankingArticle[];
 }) {
@@ -32,7 +42,9 @@ export default function TermRankingsResults({
                 <header className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-semibold">Ranking de términos</h1>
-                        <p className="text-muted-foreground mt-2">Counting Sort · mayor frecuencia primero · empate en orden alfabético.</p>
+                        <p className="text-muted-foreground mt-2">
+                            {algorithmLabels[algorithm]} · mayor frecuencia primero · empate en orden alfabético.
+                        </p>
                     </div>
                     <Button variant="outline" asChild>
                         <Link href={route('term-rankings.index')}>Elegir otros artículos</Link>

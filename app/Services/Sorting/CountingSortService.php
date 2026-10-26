@@ -1,80 +1,100 @@
 <?php
 
-// Opens the PHP source file.
+// Inicia el archivo fuente de PHP.
 
-namespace App\Services\Sorting; // Places the sorter in the application's sorting-service namespace.
+namespace App\Services\Sorting;
 
-class CountingSortService // Defines the Counting Sort implementation used for term ranking.
+// Ubica Counting Sort en el espacio de nombres de los servicios de ordenamiento.
+
+class CountingSortService
 {
-    // Opens the sorting-service class.
+    // Inyecta el contador común para que los algoritmos procesen el mismo tipo de entrada.
+    public function __construct(private readonly TermFrequencyCounter $frequencyCounter)
+    {
+        // No requiere inicialización adicional porque la dependencia ya está inyectada.
+    }
+
+    // Recibe las palabras preparadas y devuelve el ranking junto con su tiempo medido.
     /** @param array<int, string> $terms
      * @return array{ranking: array<int, array{term: string, frequency: int}>, elapsedTimeNanoseconds: int}
      */
-    public function rank(array $terms): array // Counts terms, sorts frequencies, and returns the measured runtime.
-    { // Opens the timed algorithm entry point.
-        $startedAt = hrtime(true); // Starts a monotonic nanosecond timer after all article preprocessing is complete.
-        $frequencies = $this->countOccurrences($terms); // Builds each normalized term's occurrence count inside the timed algorithm.
-        $buckets = $this->buildFrequencyBuckets($frequencies); // Places terms into buckets indexed by their occurrence counts.
-        $ranking = $this->collectRanking($buckets); // Reads buckets from highest frequency to lowest with alphabetic tie-breaking.
+    public function rank(array $terms): array
+    {
+        // Inicia la medición después de que ArticleService terminó el procesamiento previo.
+        $startedAt = hrtime(true);
 
-        return [ // Returns the ranked rows and the algorithm-only execution time.
-            'ranking' => $ranking, // Supplies the term and its total frequency for each result row.
-            'elapsedTimeNanoseconds' => hrtime(true) - $startedAt, // Stops the timer after counting and bucket ordering finish.
-        ]; // Completes the result payload.
-    } // Closes the timed algorithm entry point.
+        // Cuenta las palabras dentro del tiempo atribuible al algoritmo.
+        $frequencies = $this->frequencyCounter->count($terms);
 
-    /** @param array<int, string> $terms
-     * @return array<string, int>
-     */
-    private function countOccurrences(array $terms): array // Counts how many times each sanitized term appears.
-    { // Opens the frequency-counting step.
-        $frequencies = []; // Initializes the term-to-frequency map.
+        // Ubica cada término en un bucket identificado por su frecuencia numérica.
+        $buckets = $this->buildFrequencyBuckets($frequencies);
 
-        foreach ($terms as $term) { // Visits each token from the selected article abstracts once.
-            if ($term === '') { // Guards against empty values if the service is called outside its normal pipeline.
-                continue; // Skips empty values because they are not terms to rank.
-            } // Closes the empty-term guard.
+        // Recorre las frecuencias de mayor a menor y resuelve los empates alfabéticamente.
+        $ranking = $this->collectRanking($buckets);
 
-            $frequencies[$term] = ($frequencies[$term] ?? 0) + 1; // Increments the count for the current term.
-        } // Closes the token-counting loop.
+        // Devuelve el ranking junto con la duración total de los pasos del algoritmo.
+        return [
+            // Expone las filas listas para mostrar en la tabla de resultados.
+            'ranking' => $ranking,
 
-        return $frequencies; // Returns the occurrence counts used as Counting Sort keys.
-    } // Closes the frequency-counting step.
+            // Detiene el cronómetro e informa el tiempo en nanosegundos.
+            'elapsedTimeNanoseconds' => hrtime(true) - $startedAt,
+        ];
+    }
 
+    // Agrupa los términos según el valor entero de su frecuencia.
     /** @param array<string, int> $frequencies
      * @return array<int, array<int, string>>
      */
-    private function buildFrequencyBuckets(array $frequencies): array // Groups distinct terms by their numeric frequencies.
-    { // Opens the bucket-construction step.
-        $maximumFrequency = $frequencies === [] ? 0 : max($frequencies); // Finds the largest key while safely handling empty input.
-        $buckets = array_fill(0, $maximumFrequency + 1, []); // Allocates one bucket for each possible count from zero to the maximum.
+    private function buildFrequencyBuckets(array $frequencies): array
+    {
+        // Obtiene la frecuencia máxima y contempla una entrada sin términos.
+        $maximumFrequency = $frequencies === [] ? 0 : max($frequencies);
 
-        foreach ($frequencies as $term => $frequency) { // Visits every distinct term and its numeric sorting key.
-            $buckets[$frequency][] = $term; // Stores the term at the bucket matching its frequency.
-        } // Closes the term-distribution loop.
+        // Reserva un índice para cada frecuencia posible, desde cero hasta el máximo.
+        $buckets = array_fill(0, $maximumFrequency + 1, []);
 
-        return $buckets; // Returns the frequency-indexed buckets for the collection step.
-    } // Closes the bucket-construction step.
+        // Recorre cada término único y su frecuencia calculada.
+        foreach ($frequencies as $term => $frequency) {
+            // Inserta el término en el bucket correspondiente a su frecuencia.
+            $buckets[$frequency][] = $term;
+        }
 
+        // Devuelve los buckets para construir el ranking descendente.
+        return $buckets;
+    }
+
+    // Convierte los buckets en filas ordenadas por frecuencia y alfabéticamente en los empates.
     /** @param array<int, array<int, string>> $buckets
      * @return array<int, array{term: string, frequency: int}>
      */
-    private function collectRanking(array $buckets): array // Emits terms in descending-frequency order.
-    { // Opens the ranking-collection step.
-        $ranking = []; // Initializes the output list of term-frequency rows.
+    private function collectRanking(array $buckets): array
+    {
+        // Inicializa la lista final de términos y frecuencias.
+        $ranking = [];
 
-        for ($frequency = count($buckets) - 1; $frequency > 0; $frequency--) { // Traverses numeric buckets from the highest count to the lowest.
-            $termsAtFrequency = $buckets[$frequency]; // Copies the terms sharing the current frequency.
-            sort($termsAtFrequency, SORT_STRING); // Orders only equal-frequency terms alphabetically without sorting the input array first.
+        // Recorre las frecuencias desde la mayor hasta la menor.
+        for ($frequency = count($buckets) - 1; $frequency > 0; $frequency--) {
+            // Obtiene los términos que comparten la frecuencia actual.
+            $termsAtFrequency = $buckets[$frequency];
 
-            foreach ($termsAtFrequency as $term) { // Visits each term in the current frequency bucket.
-                $ranking[] = [ // Adds one display-ready ranking row.
-                    'term' => $term, // Stores the normalized lowercase term.
-                    'frequency' => $frequency, // Stores the number of occurrences across all selected abstracts.
-                ]; // Completes the ranking row.
-            } // Closes the current bucket's output loop.
-        } // Closes the descending-frequency traversal.
+            // Ordena alfabéticamente solo los términos empatados en esta frecuencia.
+            sort($termsAtFrequency, SORT_STRING);
 
-        return $ranking; // Returns the final descending-frequency ranking with alphabetic ties.
-    } // Closes the ranking-collection step.
-} // Closes the sorting-service class.
+            // Agrega cada término del bucket actual al ranking.
+            foreach ($termsAtFrequency as $term) {
+                // Añade una fila con el término y su número de apariciones.
+                $ranking[] = [
+                    // Guarda la palabra normalizada que se mostrará en la tabla.
+                    'term' => $term,
+
+                    // Guarda la frecuencia que determinó la posición del término.
+                    'frequency' => $frequency,
+                ];
+            }
+        }
+
+        // Devuelve el ranking final en orden descendente de frecuencia.
+        return $ranking;
+    }
+}

@@ -1,33 +1,33 @@
 <?php
 
-// Opens the PHP source file.
+// Inicia el archivo fuente de PHP.
 
-namespace Tests\Unit; // Places the test in the unit-test namespace.
+namespace Tests\Unit; // Ubica la prueba en el espacio de nombres de pruebas unitarias.
 
-use App\Services\Sorting\CountingSortService; // Imports the service under test.
-use Tests\TestCase; // Imports the application's PHPUnit base test case.
+use App\Services\Sorting\CountingSortService; // Importa el servicio que se probará.
+use Tests\TestCase; // Importa la clase base de pruebas de la aplicación.
 
-class CountingSortServiceTest extends TestCase // Defines focused tests for the Counting Sort service.
+class CountingSortServiceTest extends TestCase // Agrupa pruebas específicas para Counting Sort.
 {
-    // Opens the test class.
-    public function test_it_ranks_by_frequency_and_breaks_ties_alphabetically(): void // Verifies descending frequency and deterministic ties.
-    { // Opens the ranking behavior test.
-        $result = (new CountingSortService)->rank(['pera', 'manzana', 'uva', 'manzana', 'pera', 'banana', 'uva', 'pera']); // Runs the algorithm on unsorted tokens.
+    // Abre la clase de pruebas.
+    public function test_it_ranks_by_frequency_and_breaks_ties_alphabetically(): void // Verifica frecuencia descendente y desempate determinista.
+    { // Abre la prueba del comportamiento del ranking.
+        $result = app(CountingSortService::class)->rank(['pera', 'manzana', 'uva', 'manzana', 'pera', 'banana', 'uva', 'pera']); // Ejecuta el algoritmo con términos desordenados.
 
-        $this->assertSame([ // Compares every produced row with the expected ranking.
-            ['term' => 'pera', 'frequency' => 3], // Expects the most frequent term first.
-            ['term' => 'manzana', 'frequency' => 2], // Expects the first alphabetical term among the frequency-two tie.
-            ['term' => 'uva', 'frequency' => 2], // Expects the second alphabetical term among the frequency-two tie.
-            ['term' => 'banana', 'frequency' => 1], // Expects the least frequent term last.
-        ], $result['ranking']); // Asserts the algorithm's ranking output.
-        $this->assertGreaterThanOrEqual(0, $result['elapsedTimeNanoseconds']); // Ensures the algorithm reports a nonnegative measured duration.
-    } // Closes the ranking behavior test.
+        $this->assertSame([ // Compara cada fila calculada con el ranking esperado.
+            ['term' => 'pera', 'frequency' => 3], // Espera primero el término más frecuente.
+            ['term' => 'manzana', 'frequency' => 2], // Espera primero alfabéticamente entre los términos empatados.
+            ['term' => 'uva', 'frequency' => 2], // Espera después el siguiente término del empate.
+            ['term' => 'banana', 'frequency' => 1], // Espera al final el término menos frecuente.
+        ], $result['ranking']); // Comprueba las filas devueltas por el algoritmo.
+        $this->assertGreaterThanOrEqual(0, $result['elapsedTimeNanoseconds']); // Comprueba que el tiempo medido no sea negativo.
+    } // Cierra la prueba del comportamiento del ranking.
 
-    public function test_it_returns_an_empty_ranking_for_an_empty_input(): void // Verifies the empty-input edge case.
-    { // Opens the empty-input test.
-        $result = (new CountingSortService)->rank([]); // Runs the algorithm without any terms.
+    public function test_it_returns_an_empty_ranking_for_an_empty_input(): void // Verifica el caso límite de una entrada vacía.
+    { // Abre la prueba de entrada vacía.
+        $result = app(CountingSortService::class)->rank([]); // Ejecuta el algoritmo sin términos.
 
-        $this->assertSame([], $result['ranking']); // Confirms that no rows are produced for empty input.
-        $this->assertGreaterThanOrEqual(0, $result['elapsedTimeNanoseconds']); // Confirms that empty input still has a measured duration.
-    } // Closes the empty-input test.
-} // Closes the test class.
+        $this->assertSame([], $result['ranking']); // Confirma que una entrada vacía no produzca filas.
+        $this->assertGreaterThanOrEqual(0, $result['elapsedTimeNanoseconds']); // Confirma que también se mida el caso vacío.
+    } // Cierra la prueba de entrada vacía.
+} // Cierra la clase de pruebas.

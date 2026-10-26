@@ -1,27 +1,27 @@
 <?php
 
-// Opens the PHP source file.
+// Inicia el archivo fuente de PHP.
 
-namespace App\Http\Requests\TermRanking; // Groups validation for the term-ranking feature.
+namespace App\Http\Requests\TermRanking; // Agrupa la validación de la función de ranking de términos.
 
-use Illuminate\Foundation\Http\FormRequest; // Imports Laravel's request-validation base class.
-use Illuminate\Validation\Rule; // Imports validation rules for the supported algorithm list.
+use Illuminate\Foundation\Http\FormRequest; // Importa la clase base de validación de solicitudes de Laravel.
+use Illuminate\Validation\Rule; // Importa reglas para limitar los algoritmos aceptados.
 
-class TermRankingRequest extends FormRequest // Defines validation for ranking query parameters.
+class TermRankingRequest extends FormRequest // Valida los parámetros de la solicitud de ranking.
 {
-    // Opens the request class.
-    public function authorize(): bool // Allows this request after the authenticated route middleware grants access.
-    { // Opens the authorization method.
-        return true; // Leaves authentication enforcement to the route's auth middleware.
-    } // Closes the authorization method.
+    // Abre la clase de validación.
+    public function authorize(): bool // Permite la solicitud cuando el middleware de autenticación ya autorizó el acceso.
+    { // Abre el método de autorización.
+        return true; // Delega la autenticación al middleware de la ruta.
+    } // Cierra el método de autorización.
 
-    /** @return array<string, array<int, mixed>> */ // Documents the shape of the Laravel validation rules.
-    public function rules(): array // Declares the accepted article identifiers and algorithm.
-    { // Opens the validation-rules method.
-        return [ // Returns the validation rules for the ranking request.
-            'article_ids' => ['required', 'array', 'min:2'], // Requires at least two selected article identifiers.
-            'article_ids.*' => ['required', 'integer', 'distinct', 'exists:articles,id'], // Ensures each selection is unique and exists.
-            'algorithm' => ['required', 'string', Rule::in(['counting-sort'])], // Restricts execution to the implemented algorithm.
-        ]; // Closes the validation-rules array.
-    } // Closes the validation-rules method.
-} // Closes the request class.
+    /** @return array<string, array<int, mixed>> */ // Documenta la estructura de las reglas de validación.
+    public function rules(): array // Declara los identificadores y algoritmos aceptados.
+    { // Abre el método que define las reglas de validación.
+        return [ // Devuelve las reglas para la solicitud de ranking.
+            'article_ids' => ['required', 'array', 'min:2'], // Exige al menos dos identificadores de artículos.
+            'article_ids.*' => ['required', 'integer', 'distinct', 'exists:articles,id'], // Exige identificadores existentes y sin duplicados.
+            'algorithm' => ['required', 'string', Rule::in(['counting-sort', 'radix-sort', 'bucket-sort'])], // Acepta solo los tres algoritmos implementados.
+        ]; // Cierra el arreglo de reglas de validación.
+    } // Cierra el método de reglas.
+} // Cierra la clase de solicitud.

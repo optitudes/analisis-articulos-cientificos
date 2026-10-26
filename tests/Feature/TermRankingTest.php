@@ -65,6 +65,27 @@ class TermRankingTest extends TestCase // Covers the authenticated term-ranking 
                 ->has('articles', 2)); // Confirms selected article labels are included in the response.
     } // Closes the ranking-result test.
 
+    public function test_radix_and_bucket_algorithms_can_receive_the_same_unsorted_words(): void // Verifica las rutas de los dos algoritmos adicionales.
+    { // Abre la prueba de selección de Radix Sort y Bucket Sort.
+        $firstArticle = Article::query()->create(['name' => 'Artículo C', 'abstract' => 'zeta alfa alfa', 'relative_path' => 'articles/c.pdf']); // Crea el primer abstract de prueba.
+        $secondArticle = Article::query()->create(['name' => 'Artículo D', 'abstract' => 'zeta beta', 'relative_path' => 'articles/d.pdf']); // Crea el segundo abstract de prueba.
+        $user = User::factory()->create(); // Crea el usuario autenticado que ejecutará ambos algoritmos.
+
+        foreach (['radix-sort', 'bucket-sort'] as $algorithm) { // Recorre los algoritmos nuevos con los mismos artículos.
+            $this->actingAs($user) // Autentica la solicitud actual.
+                ->get(route('term-rankings.results', [ // Solicita la vista de resultados del algoritmo actual.
+                    'article_ids' => [$firstArticle->id, $secondArticle->id], // Envía la misma selección de artículos.
+                    'algorithm' => $algorithm, // Elige Radix Sort o Bucket Sort según la iteración.
+                ])) // Completa los parámetros de la solicitud.
+                ->assertOk() // Confirma que el algoritmo está habilitado en el endpoint.
+                ->assertInertia(fn ($page) => $page // Inspecciona los datos enviados a la página React.
+                    ->where('algorithm', $algorithm) // Confirma qué algoritmo se ejecutó.
+                    ->where('ranking.0.term', 'alfa') // Confirma el desempate alfabético entre frecuencias iguales.
+                    ->where('ranking.0.frequency', 2) // Confirma la frecuencia de la primera palabra.
+                    ->where('ranking.1.term', 'zeta')); // Confirma el segundo término empatado.
+        } // Cierra el recorrido por los dos algoritmos.
+    } // Cierra la prueba de los algoritmos adicionales.
+
     public function test_the_results_require_at_least_two_distinct_articles(): void // Verifies backend enforcement of the minimum selection.
     { // Opens the minimum-selection validation test.
         $article = Article::query()->create(['name' => 'Artículo único', 'abstract' => 'texto', 'relative_path' => 'articles/unico.pdf']); // Creates one valid selectable article.

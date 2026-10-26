@@ -68,6 +68,33 @@ export default function TermRankingsIndex({ articles }: { articles: RankingArtic
                     </section>
                 ) : (
                     <form onSubmit={submit} className="flex max-w-4xl flex-col gap-6">
+                        <section className="bg-card flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-end sm:justify-between">
+                            <div className="grid gap-2 sm:min-w-96 sm:flex-1">
+                                <label htmlFor="ranking-algorithm" className="text-sm font-medium">
+                                    Algoritmo de ordenamiento
+                                </label>
+                                <select
+                                    id="ranking-algorithm"
+                                    value={algorithm}
+                                    onChange={(event) => setAlgorithm(event.target.value)}
+                                    className="border-input bg-background ring-offset-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-hidden"
+                                >
+                                    <option value="counting-sort">Counting Sort (ordenamiento por conteo)</option>
+                                    <option value="radix-sort">Radix Sort (ordenamiento radix)</option>
+                                    <option value="bucket-sort">Bucket Sort (ordenamiento por cubetas)</option>
+                                </select>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-4">
+                                <Button type="submit" disabled={selectedArticleIds.length < 2 || processing}>
+                                    {processing ? 'Calculando ranking…' : 'Generar ranking'}
+                                </Button>
+                                <p className="text-muted-foreground text-sm" aria-live="polite">
+                                    {selectedArticleIds.length} seleccionados · mínimo 2
+                                </p>
+                            </div>
+                        </section>
+
                         <fieldset className="space-y-3">
                             <legend className="mb-3 font-medium">Artículos científicos</legend>
                             {articles.map((article) => {
@@ -91,29 +118,6 @@ export default function TermRankingsIndex({ articles }: { articles: RankingArtic
                                 );
                             })}
                         </fieldset>
-
-                        <div className="grid max-w-sm gap-2">
-                            <label htmlFor="ranking-algorithm" className="text-sm font-medium">
-                                Algoritmo de ordenamiento
-                            </label>
-                            <select
-                                id="ranking-algorithm"
-                                value={algorithm}
-                                onChange={(event) => setAlgorithm(event.target.value)}
-                                className="border-input bg-background ring-offset-background focus-visible:ring-ring h-10 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-hidden"
-                            >
-                                <option value="counting-sort">Counting Sort (ordenamiento por conteo)</option>
-                            </select>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-4">
-                            <Button type="submit" disabled={selectedArticleIds.length < 2 || processing}>
-                                {processing ? 'Calculando ranking…' : 'Generar ranking'}
-                            </Button>
-                            <p className="text-muted-foreground text-sm" aria-live="polite">
-                                {selectedArticleIds.length} seleccionados · mínimo 2
-                            </p>
-                        </div>
                     </form>
                 )}
             </main>
