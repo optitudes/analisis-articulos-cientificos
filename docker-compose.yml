@@ -12,7 +12,7 @@ services:
       APP_ENV: production
       APP_DEBUG: ${DOCKER_APP_DEBUG:-false}
       APP_KEY: ${DOCKER_APP_KEY:-}
-      APP_URL: ${DOCKER_APP_URL:-http://localhost:8080}
+      APP_URL: ${DOCKER_APP_URL:-http://localhost:${WEB_PORT:-8081}}
       DB_CONNECTION: mysql
       DB_HOST: db
       DB_PORT: 3306
@@ -24,7 +24,7 @@ services:
       QUEUE_CONNECTION: sync
       LOG_CHANNEL: stderr
     ports:
-      - "${WEB_PORT:-8081}:80"
+      - "${WEB_BIND_IP:-127.0.0.1}:${WEB_PORT:-8081}:80"
 
   db:
     image: mysql:8.4
