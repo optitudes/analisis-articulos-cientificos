@@ -1,0 +1,27 @@
+# Radix Sort, Bucket Sort y Counting Sort
+
+En las explicaciones, `n` representa la cantidad de elementos que se van a ordenar. La complejidad se refiere al ordenamiento, salvo que se indique lo contrario.
+
+## Radix Sort
+
+Radix Sort ordena claves numéricas procesando sus dígitos por posiciones, normalmente desde las unidades hasta la posición más significativa. En cada pasada distribuye los elementos según el dígito actual y los reúne conservando su orden relativo. Esa estabilidad permite que las pasadas posteriores respeten lo ordenado en las anteriores.
+
+Si `d` es la cantidad de dígitos de la clave más grande y `k` es la cantidad de valores posibles por dígito, cada pasada distribuye y reúne `n` elementos en `O(n + k)`. Por tanto, el costo total es **`O(d(n + k))`**. Se suele expresar como **`O(n + k)`** cuando `d` es constante o está acotado, por ejemplo, al ordenar enteros de tamaño fijo. En esta implementación, los dígitos son decimales, por lo que `k = 10`; el costo de las pasadas es `O(dn)`.
+
+En el proyecto, Radix Sort ordena las frecuencias de los términos. Después, ordena alfabéticamente los términos empatados; ese paso adicional puede costar hasta `O(n log n)` si muchos términos tienen la misma frecuencia. Por ello, `O(d(n + k))` describe las pasadas de Radix Sort, no necesariamente todo el trabajo de desempate de esta implementación.
+
+## Bucket Sort
+
+Bucket Sort divide el rango de valores en cubetas, distribuye cada elemento en la cubeta de su rango, ordena los elementos dentro de cada cubeta y concatena las cubetas en el orden adecuado.
+
+Con `n` elementos y `b` cubetas, distribuir y concatenar cuesta `O(n + b)`. Si los valores se reparten aproximadamente de forma uniforme, hay suficientes cubetas y el ordenamiento local es eficiente, cada cubeta contiene pocos elementos en promedio y el costo esperado del algoritmo puede ser **`O(n)`**. Esta cota depende de esos supuestos: con una distribución desequilibrada, muchas claves pueden caer en la misma cubeta y el costo puede aumentar. No es una garantía para cualquier entrada.
+
+En la implementación de este proyecto, la cantidad de cubetas depende de la frecuencia máxima y los elementos de cada cubeta se ordenan con `usort`. Por eso, la cota lineal esperada del Bucket Sort clásico no está garantizada por esta implementación. En el peor caso, el ordenamiento local puede costar **`O(n log n)`**; además, la selección de rangos depende del valor máximo de frecuencia.
+
+## Counting Sort
+
+Counting Sort ordena claves enteras contando cuántas veces aparece cada valor. Reserva una posición de conteo por cada valor del rango, recorre los elementos para agruparlos por su clave y luego recorre los conteos en orden para reconstruir la salida. No compara cada par de elementos.
+
+Si `n` es la cantidad de elementos y `k` el tamaño del rango de claves (de la mínima a la máxima, inclusive), inicializar y recorrer los conteos cuesta `O(k)`, y contar y reconstruir los elementos cuesta `O(n)`. Por eso, el tiempo es **`O(n + k)`** y el espacio adicional es **`O(k)`** para los conteos —más la salida si se construye aparte—. Es eficiente cuando las claves son enteras y `k` no es mucho mayor que `n`; si el rango es enorme y disperso, el costo de inicializarlo puede dejar de ser conveniente.
+
+En el proyecto, Counting Sort usa la frecuencia de cada término como clave y crea una cubeta para cada frecuencia desde cero hasta la frecuencia máxima. Su costo de agrupación y recorrido es `O(n + F)`, donde `n` es la cantidad de términos distintos y `F` la frecuencia máxima. Luego ordena alfabéticamente los términos que empatan; ese paso puede añadir hasta `O(n log n)` en el peor caso. Por tanto, `O(n + k)` describe la parte de conteo, no necesariamente el desempate alfabético completo.

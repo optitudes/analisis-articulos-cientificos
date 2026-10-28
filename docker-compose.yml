@@ -1,0 +1,49 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_NAME: ${DOCKER_APP_NAME:-AnalisisArticulos}
+      APP_ENV: production
+      APP_DEBUG: ${DOCKER_APP_DEBUG:-false}
+      APP_KEY: ${DOCKER_APP_KEY:-}
+      APP_URL: ${DOCKER_APP_URL:-http://localhost:8080}
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE:-analisis_articulos}
+      DB_USERNAME: ${MYSQL_USER:-analisis_app}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-cambia-esta-clave}
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      LOG_CHANNEL: stderr
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    # Volatile storage: database files disappear when this container stops.
+    tmpfs:
+      - /var/lib/mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-analisis_articulos}
+      MYSQL_USER: ${MYSQL_USER:-analisis_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-cambia-esta-clave}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-cambia-esta-clave-root}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s

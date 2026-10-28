@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+!.env.example
+node_modules
+vendor
+public/build
+public/hot
+database/database.sqlite
+storage/logs/*.log
+bootstrap/cache/*.php
+.phpunit.result.cache
+npm-debug.log
+yarn-error.log
