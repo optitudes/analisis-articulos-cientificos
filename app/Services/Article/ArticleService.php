@@ -3,6 +3,7 @@
 namespace App\Services\Article;
 
 use App\Models\Article\Article;
+use App\Services\Article\DTO\PreprocessedAbstractDTO;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str; // Importa la utilidad de transliteración de Laravel para normalizar texto acentuado.
 
@@ -57,16 +58,37 @@ class ArticleService
     { // Inicia el flujo de preparación de palabras.
         $abstracts = $this->abstractsForArticles($articleIds); // Lee todos los abstracts seleccionados con una sola consulta.
         $combinedAbstract = $this->combineAbstracts($abstracts); // Une los abstracts en un único texto.
-        $sanitizedAbstract = $this->sanitizeAbstract($combinedAbstract); // Normaliza mayúsculas y tildes antes de separar palabras.
 
-        $terms = $this->splitAbstractIntoTerms($sanitizedAbstract); // Extrae palabras sin ordenarlas alfabéticamente.
-        $stopwords = array_flip(self::STOPWORDS); // Prepara una búsqueda rápida para descartar conectores.
-
-        return array_values(array_filter(
-            $terms,
-            static fn (string $term): bool => ! isset($stopwords[$term]),
-        )); // Conserva el orden y las repeticiones de los términos que no son stopwords.
+        return $this->termsFromAbstract($combinedAbstract); // Normaliza, tokeniza y filtra conectores.
     } // Finaliza el flujo de preparación de palabras.
+
+    /**
+     * Prepara cada resumen por separado para compararlo con otros artículos.
+     *
+     * @param  array<int, int>  $articleIds
+     * @return array<int, PreprocessedAbstractDTO>
+     */
+    public function preprocessAbstracts(array $articleIds): array
+    {
+        $articles = Article::query()
+            ->select(['id', 'name', 'abstract', 'relative_path'])
+            ->whereIn('id', $articleIds)
+            ->orderBy('id')
+            ->get();
+
+        $preprocessedAbstracts = [];
+
+        foreach ($articles as $article) {
+            $preprocessedAbstracts[] = new PreprocessedAbstractDTO(
+                articleId: $article->id,
+                articleName: $article->name,
+                terms: $this->termsFromAbstract($article->abstract ?? ''),
+                relativePath: $article->relative_path,
+            );
+        }
+
+        return $preprocessedAbstracts;
+    }
 
     /** @param array<int, int> $articleIds
      * @return array<int, string|null>
@@ -110,6 +132,23 @@ class ArticleService
 
         return $terms === false ? [] : array_values($terms); // Devuelve una lista reindexada y controla posibles fallos de la expresión.
     } // Finaliza la tokenización basada en una expresión regular.
+
+    /** @return array<int, string> */
+    private function termsFromAbstract(string $abstract): array
+    {
+        $normalizedAbstract = $this->sanitizeAbstract($abstract);
+        $terms = $this->splitAbstractIntoTerms($normalizedAbstract);
+        $stopwords = array_flip(self::STOPWORDS);
+        $contentTerms = [];
+
+        foreach ($terms as $term) {
+            if (! isset($stopwords[$term])) {
+                $contentTerms[] = $term;
+            }
+        }
+
+        return $contentTerms;
+    }
 
     public function findOrFail(int $id): Article
     {
