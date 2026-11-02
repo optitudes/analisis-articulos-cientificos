@@ -8,6 +8,25 @@ use Illuminate\Support\Str; // Importa la utilidad de transliteración de Larave
 
 class ArticleService
 {
+    /** @var array<int, string> */
+    private const STOPWORDS = [
+        'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'as', 'at',
+        'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by',
+        'can', 'could',
+        'did', 'do', 'does', 'doing', 'down', 'during',
+        'each', 'e', 'few', 'for', 'from', 'further',
+        'g', 'had', 'has', 'have', 'having', 'he', 'her', 'here', 'hers', 'herself', 'him', 'himself', 'his',
+        'how', 'i', 'if', 'in', 'into', 'is', 'it', 'its', 'itself',
+        'just', 'll', 'm', 'ma', 'me', 'might', 'more', 'most', 'must', 'my', 'myself',
+        'no', 'nor', 'not', 'now', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours',
+        'ourselves', 'out', 'over', 'own',
+        're', 's', 'same', 'shan', 'she', 'should', 'shouldn', 'so', 'some', 'such',
+        't', 'than', 'that', 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', 'these', 'they',
+        'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very',
+        'was', 'we', 'were', 'what', 'when', 'where', 'which', 'while', 'who', 'whom', 'why', 'will', 'with',
+        'would', 'y', 'you', 'your', 'yours', 'yourself', 'yourselves',
+    ];
+
     /** @return Collection<int, Article> */
     public function all(): Collection
     {
@@ -40,7 +59,13 @@ class ArticleService
         $combinedAbstract = $this->combineAbstracts($abstracts); // Une los abstracts en un único texto.
         $sanitizedAbstract = $this->sanitizeAbstract($combinedAbstract); // Normaliza mayúsculas y tildes antes de separar palabras.
 
-        return $this->splitAbstractIntoTerms($sanitizedAbstract); // Extrae palabras sin ordenarlas alfabéticamente.
+        $terms = $this->splitAbstractIntoTerms($sanitizedAbstract); // Extrae palabras sin ordenarlas alfabéticamente.
+        $stopwords = array_flip(self::STOPWORDS); // Prepara una búsqueda rápida para descartar conectores.
+
+        return array_values(array_filter(
+            $terms,
+            static fn (string $term): bool => ! isset($stopwords[$term]),
+        )); // Conserva el orden y las repeticiones de los términos que no son stopwords.
     } // Finaliza el flujo de preparación de palabras.
 
     /** @param array<int, int> $articleIds
