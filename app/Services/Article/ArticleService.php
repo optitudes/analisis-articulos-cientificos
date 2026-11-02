@@ -3,11 +3,31 @@
 namespace App\Services\Article;
 
 use App\Models\Article\Article;
+use App\Services\Article\DTO\PreprocessedAbstractDTO;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str; // Importa la utilidad de transliteración de Laravel para normalizar texto acentuado.
 
 class ArticleService
 {
+    /** @var array<int, string> */
+    private const STOPWORDS = [
+        'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'as', 'at',
+        'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by',
+        'can', 'could',
+        'did', 'do', 'does', 'doing', 'down', 'during',
+        'each', 'e', 'few', 'for', 'from', 'further',
+        'g', 'had', 'has', 'have', 'having', 'he', 'her', 'here', 'hers', 'herself', 'him', 'himself', 'his',
+        'how', 'i', 'if', 'in', 'into', 'is', 'it', 'its', 'itself',
+        'just', 'll', 'm', 'ma', 'me', 'might', 'more', 'most', 'must', 'my', 'myself',
+        'no', 'nor', 'not', 'now', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours',
+        'ourselves', 'out', 'over', 'own',
+        're', 's', 'same', 'shan', 'she', 'should', 'shouldn', 'so', 'some', 'such',
+        't', 'than', 'that', 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', 'these', 'they',
+        'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very',
+        'was', 'we', 'were', 'what', 'when', 'where', 'which', 'while', 'who', 'whom', 'why', 'will', 'with',
+        'would', 'y', 'you', 'your', 'yours', 'yourself', 'yourselves',
+    ];
+
     /** @return Collection<int, Article> */
     public function all(): Collection
     {
@@ -38,10 +58,37 @@ class ArticleService
     { // Inicia el flujo de preparación de palabras.
         $abstracts = $this->abstractsForArticles($articleIds); // Lee todos los abstracts seleccionados con una sola consulta.
         $combinedAbstract = $this->combineAbstracts($abstracts); // Une los abstracts en un único texto.
-        $sanitizedAbstract = $this->sanitizeAbstract($combinedAbstract); // Normaliza mayúsculas y tildes antes de separar palabras.
 
-        return $this->splitAbstractIntoTerms($sanitizedAbstract); // Extrae palabras sin ordenarlas alfabéticamente.
+        return $this->termsFromAbstract($combinedAbstract); // Normaliza, tokeniza y filtra conectores.
     } // Finaliza el flujo de preparación de palabras.
+
+    /**
+     * Prepara cada resumen por separado para compararlo con otros artículos.
+     *
+     * @param  array<int, int>  $articleIds
+     * @return array<int, PreprocessedAbstractDTO>
+     */
+    public function preprocessAbstracts(array $articleIds): array
+    {
+        $articles = Article::query()
+            ->select(['id', 'name', 'abstract', 'relative_path'])
+            ->whereIn('id', $articleIds)
+            ->orderBy('id')
+            ->get();
+
+        $preprocessedAbstracts = [];
+
+        foreach ($articles as $article) {
+            $preprocessedAbstracts[] = new PreprocessedAbstractDTO(
+                articleId: $article->id,
+                articleName: $article->name,
+                terms: $this->termsFromAbstract($article->abstract ?? ''),
+                relativePath: $article->relative_path,
+            );
+        }
+
+        return $preprocessedAbstracts;
+    }
 
     /** @param array<int, int> $articleIds
      * @return array<int, string|null>
@@ -85,6 +132,23 @@ class ArticleService
 
         return $terms === false ? [] : array_values($terms); // Devuelve una lista reindexada y controla posibles fallos de la expresión.
     } // Finaliza la tokenización basada en una expresión regular.
+
+    /** @return array<int, string> */
+    private function termsFromAbstract(string $abstract): array
+    {
+        $normalizedAbstract = $this->sanitizeAbstract($abstract);
+        $terms = $this->splitAbstractIntoTerms($normalizedAbstract);
+        $stopwords = array_flip(self::STOPWORDS);
+        $contentTerms = [];
+
+        foreach ($terms as $term) {
+            if (! isset($stopwords[$term])) {
+                $contentTerms[] = $term;
+            }
+        }
+
+        return $contentTerms;
+    }
 
     public function findOrFail(int $id): Article
     {

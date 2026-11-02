@@ -6,6 +6,7 @@ namespace Tests\Feature; // Places the test in the feature-test namespace.
 
 use App\Models\Article\Article; // Imports the article model used to prepare test records.
 use App\Models\User; // Imports the authenticated user model.
+use App\Services\Article\ArticleService; // Imports article text preprocessing for direct assertions.
 use Illuminate\Foundation\Testing\RefreshDatabase; // Resets the test database between feature tests.
 use Tests\TestCase; // Imports the application's HTTP testing base class.
 
@@ -64,6 +65,27 @@ class TermRankingTest extends TestCase // Covers the authenticated term-ranking 
                 ->has('executionTimeNanoseconds') // Confirms that the algorithm-only duration is included.
                 ->has('articles', 2)); // Confirms selected article labels are included in the response.
     } // Closes the ranking-result test.
+
+    public function test_prepared_terms_exclude_stopwords_and_keep_content_terms(): void
+    {
+        $firstArticle = Article::query()->create([
+            'name' => 'First article',
+            'abstract' => 'The AI and the education of researchers',
+            'relative_path' => 'articles/first.pdf',
+        ]);
+        $secondArticle = Article::query()->create([
+            'name' => 'Second article',
+            'abstract' => 'Research in AI for students',
+            'relative_path' => 'articles/second.pdf',
+        ]);
+
+        $terms = app(ArticleService::class)->prepareTermsForRanking([
+            $firstArticle->id,
+            $secondArticle->id,
+        ]);
+
+        $this->assertSame(['ai', 'education', 'researchers', 'research', 'ai', 'students'], $terms);
+    }
 
     public function test_radix_and_bucket_algorithms_can_receive_the_same_unsorted_words(): void // Verifica las rutas de los dos algoritmos adicionales.
     { // Abre la prueba de selección de Radix Sort y Bucket Sort.
